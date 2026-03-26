@@ -144,7 +144,7 @@ export default function IonicConcept() {
                 { name: 'MgCl₂',       cat: 'Mg²⁺ ×1 = +2',  ani: 'Cl⁻ ×2 = −2' },
                 { name: 'Al₂O₃',      cat: 'Al³⁺ ×2 = +6',  ani: 'O²⁻ ×3 = −6' },
                 { name: 'Ca₃(PO₄)₂',  cat: 'Ca²⁺ ×3 = +6',  ani: 'PO₄³⁻ ×2 = −6' },
-                { name: 'H₂SO₄',      cat: 'H⁺ ×2 = +2',    ani: 'SO₄²⁻ ×1 = −2' },
+                { name: 'Na₂SO₄',     cat: 'Na⁺ ×2 = +2',   ani: 'SO₄²⁻ ×1 = −2' },
               ].map((r, i) => (
                 <tr key={i} style={{ background: i % 2 ? '#fafafa' : '#fff' }}>
                   <td style={{ padding: '11px 16px', fontWeight: 700, color: '#1d1d1f', fontFamily: 'monospace', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{r.name}</td>
