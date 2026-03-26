@@ -99,18 +99,11 @@ function getDbKey(cats: CanvasIon[], anis: CanvasIon[]): string {
   return `${cats[0].ion.id}-${Math.abs(cats[0].ion.charge) * cats.length}+${anis[0].ion.id}-${Math.abs(anis[0].ion.charge) * anis.length}`
 }
 
-// ── 다원자 이온 판별 ──────────────────────────────────────────
-// 상위 첨자/하위 첨자 전하 기호를 제거한 뒤 대문자가 2개 이상이거나
-// 숫자·괄호가 포함되면 다원자 이온으로 판단
 function isPolyatomic(symbol: string): boolean {
-  // 유니코드 위첨자(⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻) 및 아래첨자(₀–₉) 제거
   const clean = symbol.replace(/[⁺⁻⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉]/g, '')
   return (clean.match(/[A-Z]/g) ?? []).length > 1 || /[\d()]/.test(clean)
 }
 
-// ── 화학식 포맷 헬퍼 ─────────────────────────────────────────
-// 전하 기호를 제거한 순수 화학식 문자열 반환.
-// 다원자 이온이 2개 이상일 때는 (이온)n 형태로 래핑.
 function fmtFormula(symbol: string, count: number): string {
   const clean = symbol.replace(/[⁺⁻⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉]/g, '')
   if (count === 1) return clean
@@ -122,10 +115,8 @@ function CompoundResult({ cats, anis }: { cats: CanvasIon[]; anis: CanvasIon[] }
   const data = COMPOUND_DB[key]
   const color = data?.color ?? '#3b82f6'
 
-  // DB에 없는 경우 자동으로 화학식 생성
   const autoFormula = () => {
     const cm = new Map<string, number>(), am = new Map<string, number>()
-    // symbol 자체를 key로 사용해 다원자 이온이 단원자 이온과 섞여도 구분 유지
     cats.forEach(c => { cm.set(c.ion.symbol, (cm.get(c.ion.symbol) || 0) + 1) })
     anis.forEach(a => { am.set(a.ion.symbol, (am.get(a.ion.symbol) || 0) + 1) })
     return [...cm.entries()].map(([s, n]) => fmtFormula(s, n)).join('')
@@ -176,6 +167,36 @@ function getImbalanceReason(totPos: number, totNeg: number, cats: CanvasIon[], a
   const diff = Math.abs(totPos - totNeg)
   if (totPos > totNeg) return `양이온 전하 합(+${totPos})이 음이온 합(−${totNeg})보다 ${diff} 큽니다. 음이온을 더 추가하거나 양이온을 줄이세요.`
   return `음이온 전하 합(−${totNeg})이 양이온 합(+${totPos})보다 ${diff} 큽니다. 양이온을 더 추가하거나 음이온을 줄이세요.`
+}
+
+// ── 연결 그래프 탐색: 모든 이온이 하나의 묶음인지 확인 ────────
+function isConnectedCluster(items: CanvasIon[]): boolean {
+  if (items.length === 0) return false
+  const adj = new Map<string, Set<string>>()
+  items.forEach(it => adj.set(it.uid, new Set()))
+
+  items.forEach(it => {
+    if (it.stackAbove) { adj.get(it.uid)!.add(it.stackAbove); adj.get(it.stackAbove)?.add(it.uid) }
+    if (it.stackBelow) { adj.get(it.uid)!.add(it.stackBelow); adj.get(it.stackBelow)?.add(it.uid) }
+    it.bondedAnions.forEach(aid => { adj.get(it.uid)!.add(aid); adj.get(aid)?.add(it.uid) })
+    if (it.bondedTo) { adj.get(it.uid)!.add(it.bondedTo); adj.get(it.bondedTo)?.add(it.uid) }
+  })
+
+  const visited = new Set<string>()
+  const queue = [items[0].uid]
+  visited.add(items[0].uid)
+  while (queue.length) {
+    const cur = queue.shift()!
+    adj.get(cur)?.forEach(nb => { if (!visited.has(nb)) { visited.add(nb); queue.push(nb) } })
+  }
+  return visited.size === items.length
+}
+
+// ── 이온 종류가 정확히 1쌍(양이온 1종 + 음이온 1종)인지 확인 ──
+function isSinglePair(cats: CanvasIon[], anis: CanvasIon[]): boolean {
+  const catTypes = new Set(cats.map(c => c.ion.id))
+  const aniTypes = new Set(anis.map(a => a.ion.id))
+  return catTypes.size === 1 && aniTypes.size === 1
 }
 
 interface CanvasIon {
@@ -433,13 +454,26 @@ export default function IonicBonding() {
   const totPos = cations.reduce((s, c) => s + c.ion.charge, 0)
   const totNeg = anions.reduce((s, a) => s + Math.abs(a.ion.charge), 0)
   const balanced = cations.length > 0 && anions.length > 0 && totPos === totNeg
+    && isSinglePair(cations, anions) && isConnectedCluster(items)
 
   const check = () => {
-    if (balanced) {
-      setFeedback({ ok: true, msg: '전하 균형 달성', detail: `양이온 합계 +${totPos}, 음이온 합계 −${totNeg} → 전기적으로 중성인 화합물 완성` })
-    } else {
+    if (!cations.length || !anions.length) {
       setFeedback({ ok: false, msg: '전하 균형이 맞지 않습니다', detail: getImbalanceReason(totPos, totNeg, cations, anions) })
+      return
     }
+    if (!isSinglePair(cations, anions)) {
+      setFeedback({ ok: false, msg: '이온 종류를 확인해주세요', detail: '하나의 화합물은 양이온 1종 + 음이온 1종으로만 구성되어야 합니다. (예: NaCl + KBr 혼합 불가)' })
+      return
+    }
+    if (!isConnectedCluster(items)) {
+      setFeedback({ ok: false, msg: '이온이 연결되지 않았습니다', detail: '모든 이온이 snap으로 결합된 하나의 묶음이어야 합니다. 이온을 가까이 놓아 결합시켜주세요.' })
+      return
+    }
+    if (totPos !== totNeg) {
+      setFeedback({ ok: false, msg: '전하 균형이 맞지 않습니다', detail: getImbalanceReason(totPos, totNeg, cations, anions) })
+      return
+    }
+    setFeedback({ ok: true, msg: '전하 균형 달성', detail: `양이온 합계 +${totPos}, 음이온 합계 −${totNeg} → 전기적으로 중성인 화합물 완성` })
   }
 
   const catList = IONS.filter(i => i.type === 'cation')
