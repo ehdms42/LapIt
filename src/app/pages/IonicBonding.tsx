@@ -4,19 +4,14 @@ import { RotateCcw, CheckCircle, XCircle, Info } from 'lucide-react'
 import { IONS, type Ion } from '../data/ions'
 import { COMPOUND_DB } from '../data/compounds'
 
-// ── 퍼즐 치수 ────────────────────────────────────────────────
-// pieceH(n) = n × UNIT_H
-// H⁺(1) × 2개 = SO₄²⁻(2) × 1개 = 176px → 완벽히 맞물림
-// notch는 각 UNIT_H 구간의 정중앙에 배치
-const BW = 96       // 블록 기본 너비
-const ND = 20       // notch 깊이
-const NOTCH_H = 22  // notch 세로 높이
-const UNIT_H = 88   // 전하 1단위 높이 (모든 블록 높이의 기준)
-const SNAP = 90     // snap 발동 거리(px)
+const BW = 96
+const ND = 20
+const NOTCH_H = 22
+const UNIT_H = 88
+const SNAP = 90
 
 const pieceH = (n: number) => n * UNIT_H
 
-// 양이온: 오른쪽에 사각 홈. i번째 구간 중앙 = (i+0.5)*UNIT_H
 function catPath(n: number, H: number) {
   let p = `M0 0 L${BW} 0`
   for (let i = 0; i < n; i++) {
@@ -27,7 +22,6 @@ function catPath(n: number, H: number) {
   return p + ` L${BW} ${H} L0 ${H} Z`
 }
 
-// 음이온: 왼쪽에 사각 돌출. 양이온 홈과 정확히 동일한 위치/치수
 function aniPath(n: number, H: number) {
   let p = `M${ND} 0`
   for (let i = 0; i < n; i++) {
@@ -38,7 +32,6 @@ function aniPath(n: number, H: number) {
   return p + ` L${ND} ${H} L${ND + BW} ${H} L${ND + BW} 0 Z`
 }
 
-// ── 퍼즐 조각 SVG 컴포넌트 ───────────────────────────────────
 function PuzzlePiece({ ion, scale = 1, snapped = false }: { ion: Ion; scale?: number; snapped?: boolean }) {
   const n = Math.abs(ion.charge)
   const H = pieceH(n)
@@ -70,7 +63,6 @@ function PuzzlePiece({ ion, scale = 1, snapped = false }: { ion: Ion; scale?: nu
   )
 }
 
-// ── 팔레트 아이템 컴포넌트 ────────────────────────────────────
 function PaletteItem({ ion, onDragStart }: { ion: Ion; onDragStart: (ion: Ion, e: React.PointerEvent) => void }) {
   return (
     <div
@@ -102,14 +94,29 @@ function PaletteItem({ ion, onDragStart }: { ion: Ion; onDragStart: (ion: Ion, e
   )
 }
 
-// ── DB 키 생성 함수 ──────────────────────────────────────────
-// 형식: "{양이온id}-{전하합}+{음이온id}-{전하합}"
 function getDbKey(cats: CanvasIon[], anis: CanvasIon[]): string {
   if (!cats.length || !anis.length) return ''
   return `${cats[0].ion.id}-${Math.abs(cats[0].ion.charge) * cats.length}+${anis[0].ion.id}-${Math.abs(anis[0].ion.charge) * anis.length}`
 }
 
-// ── 화합물 결과 컴포넌트 ─────────────────────────────────────
+// ── 다원자 이온 판별 ──────────────────────────────────────────
+// 상위 첨자/하위 첨자 전하 기호를 제거한 뒤 대문자가 2개 이상이거나
+// 숫자·괄호가 포함되면 다원자 이온으로 판단
+function isPolyatomic(symbol: string): boolean {
+  // 유니코드 위첨자(⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻) 및 아래첨자(₀–₉) 제거
+  const clean = symbol.replace(/[⁺⁻⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉]/g, '')
+  return (clean.match(/[A-Z]/g) ?? []).length > 1 || /[\d()]/.test(clean)
+}
+
+// ── 화학식 포맷 헬퍼 ─────────────────────────────────────────
+// 전하 기호를 제거한 순수 화학식 문자열 반환.
+// 다원자 이온이 2개 이상일 때는 (이온)n 형태로 래핑.
+function fmtFormula(symbol: string, count: number): string {
+  const clean = symbol.replace(/[⁺⁻⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉]/g, '')
+  if (count === 1) return clean
+  return isPolyatomic(symbol) ? `(${clean})${count}` : `${clean}${count}`
+}
+
 function CompoundResult({ cats, anis }: { cats: CanvasIon[]; anis: CanvasIon[] }) {
   const key = getDbKey(cats, anis)
   const data = COMPOUND_DB[key]
@@ -118,10 +125,11 @@ function CompoundResult({ cats, anis }: { cats: CanvasIon[]; anis: CanvasIon[] }
   // DB에 없는 경우 자동으로 화학식 생성
   const autoFormula = () => {
     const cm = new Map<string, number>(), am = new Map<string, number>()
-    cats.forEach(c => { const s = c.ion.symbol.replace(/[⁺⁻²³⁴]/g, ''); cm.set(s, (cm.get(s) || 0) + 1) })
-    anis.forEach(a => { const s = a.ion.symbol.replace(/[⁺⁻²³⁴]/g, ''); am.set(s, (am.get(s) || 0) + 1) })
-    return [...cm.entries()].map(([s, n]) => `${s}${n > 1 ? n : ''}`).join('')
-      + [...am.entries()].map(([s, n]) => `${s}${n > 1 ? n : ''}`).join('')
+    // symbol 자체를 key로 사용해 다원자 이온이 단원자 이온과 섞여도 구분 유지
+    cats.forEach(c => { cm.set(c.ion.symbol, (cm.get(c.ion.symbol) || 0) + 1) })
+    anis.forEach(a => { am.set(a.ion.symbol, (am.get(a.ion.symbol) || 0) + 1) })
+    return [...cm.entries()].map(([s, n]) => fmtFormula(s, n)).join('')
+         + [...am.entries()].map(([s, n]) => fmtFormula(s, n)).join('')
   }
 
   const formula = data?.formula ?? autoFormula()
@@ -138,7 +146,6 @@ function CompoundResult({ cats, anis }: { cats: CanvasIon[]; anis: CanvasIon[] }
         boxShadow: `0 4px 24px ${color}15, 0 2px 8px rgba(0,0,0,0.06)`,
       }}
     >
-      {/* 화합물 헤더 */}
       <div style={{
         padding: '18px 24px', borderBottom: '1px solid rgba(0,0,0,0.05)',
         background: color + '0a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
@@ -149,7 +156,6 @@ function CompoundResult({ cats, anis }: { cats: CanvasIon[]; anis: CanvasIon[] }
         </div>
         <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', background: color, borderRadius: 100, padding: '6px 16px' }}>{name}</span>
       </div>
-      {/* 화합물 특성 */}
       <div style={{ padding: '16px 24px' }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: '#86868b', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>주요 특성</p>
         {props.map((p, i) => (
@@ -163,7 +169,6 @@ function CompoundResult({ cats, anis }: { cats: CanvasIon[]; anis: CanvasIon[] }
   )
 }
 
-// ── 전하 불균형 이유 메시지 ──────────────────────────────────
 function getImbalanceReason(totPos: number, totNeg: number, cats: CanvasIon[], anis: CanvasIon[]): string {
   if (!cats.length && !anis.length) return '캔버스에 이온을 추가해주세요.'
   if (!cats.length) return '양이온(+)을 추가해주세요.'
@@ -173,19 +178,17 @@ function getImbalanceReason(totPos: number, totNeg: number, cats: CanvasIon[], a
   return `음이온 전하 합(−${totNeg})이 양이온 합(+${totPos})보다 ${diff} 큽니다. 양이온을 더 추가하거나 음이온을 줄이세요.`
 }
 
-// ── 캔버스 이온 타입 ─────────────────────────────────────────
 interface CanvasIon {
   uid: string
   ion: Ion
   x: number
   y: number
-  stackAbove: string | null   // 위에 연결된 양이온 uid
-  stackBelow: string | null   // 아래에 연결된 양이온 uid
-  bondedAnions: string[]      // 결합된 음이온 uid 목록
-  bondedTo: string | null     // 결합된 양이온 uid (음이온용)
+  stackAbove: string | null
+  stackBelow: string | null
+  bondedAnions: string[]
+  bondedTo: string | null
 }
 
-// 특정 양이온이 속한 세로 스택 전체 반환 (위→아래 순서)
 function getStack(uid: string, items: CanvasIon[]): CanvasIon[] {
   const map = new Map(items.map(it => [it.uid, it]))
   let top = map.get(uid)!
@@ -203,14 +206,12 @@ function getStack(uid: string, items: CanvasIon[]): CanvasIon[] {
   return result
 }
 
-// 스택의 총 높이 & top Y 계산
 function stackBounds(stack: CanvasIon[]) {
   const topY = stack[0].y
   const totalH = stack.reduce((s, it) => s + pieceH(Math.abs(it.ion.charge)), 0)
   return { topY, totalH, bottomY: topY + totalH }
 }
 
-// ── 메인 컴포넌트 ─────────────────────────────────────────────
 export default function IonicBonding() {
   const [tab, setTab] = useState<'cation' | 'anion'>('cation')
   const [items, setItems] = useState<CanvasIon[]>([])
@@ -221,7 +222,6 @@ export default function IonicBonding() {
     ({ uid: null, ion: null, ghostEl: null, offsetX: 0, offsetY: 0, fromPalette: false })
   const mkUid = () => `u${uidRef.current++}`
 
-  // 팔레트에서 드래그 시작
   const onPaletteDragStart = useCallback((ion: Ion, e: React.PointerEvent) => {
     e.preventDefault()
     const ghost = document.createElement('div')
@@ -233,7 +233,6 @@ export default function IonicBonding() {
     window.addEventListener('pointerup', onUp)
   }, [])
 
-  // 캔버스에서 드래그 시작
   const onCanvasDragStart = useCallback((e: React.PointerEvent, uid: string) => {
     e.preventDefault(); e.stopPropagation()
     const item = items.find(i => i.uid === uid)
@@ -245,7 +244,6 @@ export default function IonicBonding() {
       offsetY: e.clientY - rect.top - item.y,
       fromPalette: false,
     }
-    // 기존 snap 연결 해제 (bondedAnions도 같이 초기화)
     setItems(prev => prev.map(it => {
       if (it.uid === uid) return { ...it, stackAbove: null, stackBelow: null, bondedTo: null, bondedAnions: [] }
       return {
@@ -261,7 +259,6 @@ export default function IonicBonding() {
     window.addEventListener('pointerup', onUp)
   }, [items])
 
-  // 포인터 이동
   const onMove = useCallback((e: PointerEvent) => {
     const d = drag.current
     if (!d.ion) return
@@ -279,7 +276,6 @@ export default function IonicBonding() {
     }
   }, [])
 
-  // 포인터 업 (드롭)
   const onUp = useCallback((e: PointerEvent) => {
     const d = drag.current
     if (!d.ion) return
@@ -297,7 +293,6 @@ export default function IonicBonding() {
       let next = [...prev]
       let dUid = d.uid
 
-      // 팔레트에서 드롭 → 새 이온 생성
       if (d.fromPalette) {
         const nu = mkUid()
         next = [...next, { uid: nu, ion: d.ion!, x: dropX, y: dropY, stackAbove: null, stackBelow: null, bondedAnions: [], bondedTo: null }]
@@ -310,7 +305,6 @@ export default function IonicBonding() {
       const isCat = dropped.ion.type === 'cation'
       const drH = pieceH(Math.abs(dropped.ion.charge))
 
-      // 가장 가까운 snap 대상 탐색
       let bestDist = SNAP, bestUid: string | null = null
       let mode: 'horiCatAnion' | 'horiAniCat' | 'stackBelow' | 'stackAbove' = 'horiCatAnion'
 
@@ -320,14 +314,12 @@ export default function IonicBonding() {
         const otIsCat = other.ion.type === 'cation'
 
         if (isCat && !otIsCat) {
-          // 양이온 → 음이온 가로 결합
           if (other.bondedTo) continue
           const dx = (dropped.x + BW) - (other.x + ND)
           const dy = (dropped.y + drH / 2) - (other.y + otH / 2)
           const dist = Math.hypot(dx, dy)
           if (dist < bestDist) { bestDist = dist; bestUid = other.uid; mode = 'horiCatAnion' }
         } else if (!isCat && otIsCat) {
-          // 음이온 → 양이온 가로 결합
           const stack = getStack(other.uid, next)
           const { topY, totalH } = stackBounds(stack)
           const dx = (dropped.x + ND) - (other.x + BW)
@@ -335,7 +327,6 @@ export default function IonicBonding() {
           const dist = Math.hypot(dx, dy)
           if (dist < bestDist) { bestDist = dist; bestUid = other.uid; mode = 'horiAniCat' }
         } else if (isCat && otIsCat) {
-          // 양이온끼리 세로 스택
           const distB = Math.hypot(dropped.x - other.x, dropped.y - (other.y + otH))
           const distA = Math.hypot(dropped.x - other.x, (dropped.y + drH) - other.y)
           if (distB < bestDist) { bestDist = distB; bestUid = other.uid; mode = 'stackBelow' }
@@ -391,7 +382,6 @@ export default function IonicBonding() {
           return it
         })
       } else {
-        // stackAbove
         const newY = partner.y - drH
         next = next.map(it => {
           if (it.uid === dUid) return { ...it, x: partner.x, y: newY, stackBelow: bestUid }
@@ -425,7 +415,6 @@ export default function IonicBonding() {
     drag.current = { uid: null, ion: null, ghostEl: null, offsetX: 0, offsetY: 0, fromPalette: false }
   }
 
-  // 이온 제거
   const remove = (uid: string) => {
     setItems(prev => prev.filter(it => it.uid !== uid).map(it => ({
       ...it,
@@ -437,17 +426,14 @@ export default function IonicBonding() {
     setFeedback(null)
   }
 
-  // 초기화
   const reset = () => { setItems([]); setFeedback(null) }
 
-  // 전하 계산
   const cations = items.filter(i => i.ion.type === 'cation')
   const anions = items.filter(i => i.ion.type === 'anion')
   const totPos = cations.reduce((s, c) => s + c.ion.charge, 0)
   const totNeg = anions.reduce((s, a) => s + Math.abs(a.ion.charge), 0)
   const balanced = cations.length > 0 && anions.length > 0 && totPos === totNeg
 
-  // 균형 확인
   const check = () => {
     if (balanced) {
       setFeedback({ ok: true, msg: '전하 균형 달성', detail: `양이온 합계 +${totPos}, 음이온 합계 −${totNeg} → 전기적으로 중성인 화합물 완성` })
@@ -462,7 +448,6 @@ export default function IonicBonding() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* 페이지 헤더 */}
       <div>
         <p style={{ fontSize: 11, fontWeight: 700, color: '#86868b', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 6 }}>UNIT 01 — 실습</p>
         <h1 style={{ fontSize: 32, fontWeight: 800, color: '#1d1d1f', letterSpacing: '-0.03em', marginBottom: 8 }}>이온 결합</h1>
@@ -474,9 +459,7 @@ export default function IonicBonding() {
 
       <div style={{ display: 'grid', gap: 20 }} className="lg:grid-cols-[280px_1fr]">
 
-        {/* ── 팔레트 ── */}
         <div style={{ ...C, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* 탭 (양이온 / 음이온) */}
           <div style={{ display: 'flex', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
             {(['cation', 'anion'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)} style={{
@@ -490,7 +473,6 @@ export default function IonicBonding() {
               </button>
             ))}
           </div>
-          {/* 안내 텍스트 */}
           <div style={{
             padding: '8px 14px', fontSize: 11, fontWeight: 600,
             background: tab === 'cation' ? '#f0f6ff' : '#fff5f5',
@@ -499,7 +481,6 @@ export default function IonicBonding() {
           }}>
             {tab === 'cation' ? '오른쪽 홈에 음이온이 끼워집니다' : '왼쪽 돌출부가 양이온 홈에 끼워집니다'}
           </div>
-          {/* 이온 목록 */}
           <div style={{ overflowY: 'auto', flex: 1, padding: 10, maxHeight: 'calc(100vh - 260px)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {(tab === 'cation' ? catList : aniList).map(ion => (
@@ -509,10 +490,8 @@ export default function IonicBonding() {
           </div>
         </div>
 
-        {/* ── 오른쪽 영역 ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-          {/* 전하 상태 바 */}
           <div style={{ ...C, padding: '16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
               {[
@@ -540,7 +519,6 @@ export default function IonicBonding() {
             </div>
           </div>
 
-          {/* 피드백 메시지 */}
           <AnimatePresence>
             {feedback && (
               <motion.div
@@ -563,7 +541,6 @@ export default function IonicBonding() {
             )}
           </AnimatePresence>
 
-          {/* 결합 캔버스 */}
           <div style={{
             ...C, overflow: 'hidden',
             border: balanced ? '1.5px solid #86efac' : '1.5px dashed rgba(0,0,0,0.1)',
@@ -577,14 +554,12 @@ export default function IonicBonding() {
               </div>
             </div>
             <div ref={canvasRef} style={{ position: 'relative', minHeight: 420, background: items.length === 0 ? '#fafafa' : '#fff', userSelect: 'none' }}>
-              {/* 빈 캔버스 안내 */}
               {items.length === 0 && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                   <p style={{ fontSize: 15, fontWeight: 600, color: '#c9cdd2' }}>이온을 드래그해서 가져오세요</p>
                   <p style={{ fontSize: 13, color: '#d1d5db' }}>가까이 놓으면 자동으로 결합됩니다</p>
                 </div>
               )}
-              {/* 캔버스 이온들 */}
               {items.map(inst => {
                 const isSnapped = inst.bondedTo !== null || inst.stackAbove !== null || inst.stackBelow !== null || inst.bondedAnions.length > 0
                 return (
@@ -599,7 +574,6 @@ export default function IonicBonding() {
                         ? 'left 0.16s cubic-bezier(.34,1.5,.64,1),top 0.16s cubic-bezier(.34,1.5,.64,1)' : 'none',
                     }}
                   >
-                    {/* 삭제 버튼 (hover 시 표시) */}
                     <button
                       onPointerDown={e => e.stopPropagation()} onClick={() => remove(inst.uid)}
                       className="group-hover:!flex"
@@ -620,12 +594,10 @@ export default function IonicBonding() {
             </div>
           </div>
 
-          {/* 화합물 결과 카드 */}
           <AnimatePresence>
             {balanced && <CompoundResult key="result" cats={cations} anis={anions} />}
           </AnimatePresence>
 
-          {/* 알아두기 */}
           <div style={{ ...C, padding: '16px 22px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <Info style={{ width: 15, height: 15, color: '#0066cc', flexShrink: 0 }} />
