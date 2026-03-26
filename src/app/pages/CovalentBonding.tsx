@@ -250,7 +250,6 @@ function BohrView({ mol }: { mol: MolData }) {
       })}
       {/* 원자 */}
       {mol.bohrAtoms.map(atom => {
-        const maxShell = atom.shells.length;
         return (
           <g key={atom.id}>
             {atom.shells.map((_, si) => (
