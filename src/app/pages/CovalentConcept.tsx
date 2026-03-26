@@ -1,3 +1,4 @@
+import React from "react";
 import { Link } from "react-router";
 import { ArrowRight } from "lucide-react";
 
@@ -24,7 +25,7 @@ const Section = ({ num, title, children }: { num: string; title: string; childre
   </section>
 );
 
-export function CovalentConcept() {
+export default function CovalentConcept() {
   return (
     <div style={{ maxWidth: 720 }}>
       {/* 헤더 */}
