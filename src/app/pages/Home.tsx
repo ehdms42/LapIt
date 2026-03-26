@@ -16,7 +16,7 @@ const UNITS = [
     color: '#0066cc', light: '#e8f0fd', border: 'rgba(0,102,204,0.15)',
     steps: [
       { path: '/ionic-concept', label: '개념 학습', desc: '원리 · 전하 균형 · 특성' },
-      { path: '/ionic', label: '퍼즐 실습', desc: '이온 드래그 & 결합' },
+      { path: '/ionic-lab', label: '퍼즐 실습', desc: '이온 드래그 & 결합' },
     ],
   },
   {
@@ -25,7 +25,7 @@ const UNITS = [
     color: '#6600cc', light: '#f0e8fd', border: 'rgba(102,0,204,0.15)',
     steps: [
       { path: '/covalent-concept', label: '개념 학습', desc: '루이스 구조 · 결합 종류' },
-      { path: '/covalent', label: '구조 탐색', desc: '보어 모형 시각화' },
+      { path: '/covalent-lab', label: '구조 탐색', desc: '보어 모형 시각화' },
     ],
   },
   {
