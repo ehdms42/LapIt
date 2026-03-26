@@ -26,7 +26,7 @@ interface BohrBond { from: string; to: string; order: 1|2|3; }
 interface LAtom {
   id: string; symbol: string; x: number; y: number;
   fill: string; stroke: string; textColor: string;
-  dots: { x: number; y: number }[]; // 비공유 전자쌍 점 위치 (pair 단위로 2개씩)
+  dots: { x: number; y: number }[];
 }
 interface LBond { from: string; to: string; order: 1|2|3; }
 
@@ -220,6 +220,16 @@ const SHELL_R = [0, 28, 52, 78];
 
 function BohrView({ mol }: { mol: MolData }) {
   const atomMap = Object.fromEntries(mol.bohrAtoms.map(a => [a.id, a]));
+
+  // Build a per-atom count of how many electrons are contributed to bonds
+  // (always deducted from the outermost shell). Each bond of order N means
+  // each participating atom donates N electrons to the shared region.
+  const sharedCount: Record<string, number> = {};
+  for (const bond of mol.bohrBonds) {
+    sharedCount[bond.from] = (sharedCount[bond.from] ?? 0) + bond.order;
+    sharedCount[bond.to]   = (sharedCount[bond.to]   ?? 0) + bond.order;
+  }
+
   return (
     <svg viewBox="0 0 360 300" style={{ width:"100%", height:"auto" }}>
       {/* 결합 공유 영역 */}
@@ -250,15 +260,27 @@ function BohrView({ mol }: { mol: MolData }) {
       })}
       {/* 원자 */}
       {mol.bohrAtoms.map(atom => {
+        // Subtract shared electrons from the outermost shell so they are not
+        // drawn here — the shared-pair dots block below draws them once at the
+        // bond midpoint. Positions for lone electrons use the original total-
+        // per-shell for angle math so they remain stable as shared count changes.
+        const shared = sharedCount[atom.id] ?? 0;
+        const lastSi = atom.shells.length - 1;
+        const loneShells = atom.shells.map((count, si) =>
+          si === lastSi ? Math.max(0, count - shared) : count
+        );
+
         return (
           <g key={atom.id}>
             {atom.shells.map((_, si) => (
               <circle key={si} cx={atom.cx} cy={atom.cy} r={SHELL_R[si+1]}
                 fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth="1.5" />
             ))}
-            {atom.shells.map((count, si) =>
+            {loneShells.map((count, si) =>
               Array.from({length: count}, (_, ei) => {
-                const angle = ((360/count)*ei - 90) * Math.PI/180;
+                // Use original shell total for even angular spacing
+                const totalInShell = atom.shells[si];
+                const angle = ((360 / totalInShell) * ei - 90) * Math.PI / 180;
                 const r = SHELL_R[si+1];
                 return (
                   <circle key={`${si}-${ei}`}
@@ -278,7 +300,7 @@ function BohrView({ mol }: { mol: MolData }) {
           </g>
         );
       })}
-      {/* 공유 전자쌍 */}
+      {/* 공유 전자쌍 — drawn once here at bond midpoint, not duplicated above */}
       {mol.bohrBonds.map((bond, bi) => {
         const a = atomMap[bond.from], b = atomMap[bond.to];
         if (!a || !b) return null;
@@ -334,7 +356,6 @@ function LewisView({ mol }: { mol: MolData }) {
           <circle cx={a.x} cy={a.y} r={22} fill={a.fill} stroke={a.stroke} strokeWidth="2" />
           <text x={a.x} y={a.y+5} textAnchor="middle" fontSize="14" fontWeight="800"
             fill={a.textColor} style={{ fontFamily:"monospace" }}>{a.symbol}</text>
-          {/* 비공유 전자쌍 점 */}
           {a.dots.map((d, di) => (
             <circle key={di} cx={a.x+d.x} cy={a.y+d.y} r="3" fill="#374151" />
           ))}
@@ -366,7 +387,7 @@ export default function CovalentBonding() {
           보어 원자 모형과 루이스 점자식으로 전자 공유 과정을 확인하세요.
         </p>
       </div>
-
+      
       <div style={{ display:"grid", gridTemplateColumns:"220px 1fr", gap:20 }}
         className="block lg:grid">
 
@@ -409,13 +430,11 @@ export default function CovalentBonding() {
         {/* 오른쪽 */}
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
 
-          {/* 뷰 모드 토글 */}
           <AnimatePresence mode="wait">
             <motion.div key={mol.id} initial={{ opacity:0, scale:0.97 }}
               animate={{ opacity:1, scale:1 }} exit={{ opacity:0 }}
               transition={{ duration:0.25 }} style={{ ...card, overflow:"hidden" }}>
 
-              {/* 제목 바 */}
               <div style={{ padding:"18px 24px", borderBottom:"1px solid rgba(0,0,0,0.05)",
                 display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                 <div>
@@ -426,7 +445,6 @@ export default function CovalentBonding() {
                     &nbsp; {mol.name}
                   </h2>
                 </div>
-                {/* 뷰 전환 탭 */}
                 <div style={{ display:"flex", background:"#f5f5f7", borderRadius:12, padding:3, gap:2 }}>
                   {([["bohr","보어 모형"],["lewis","루이스 구조"]] as const).map(([mode, label]) => (
                     <button key={mode} onClick={() => setViewMode(mode)} style={{
@@ -441,7 +459,6 @@ export default function CovalentBonding() {
                 </div>
               </div>
 
-              {/* 시각화 영역 */}
               <div style={{ padding:"28px 24px", background:"#fafafa",
                 display:"flex", justifyContent:"center", minHeight:240 }}>
                 <div style={{ width:"100%", maxWidth:420 }}>
@@ -458,7 +475,6 @@ export default function CovalentBonding() {
                 </div>
               </div>
 
-              {/* 범례 */}
               <div style={{ padding:"12px 24px 16px",
                 borderTop:"1px solid rgba(0,0,0,0.05)",
                 display:"flex", gap:20, flexWrap:"wrap" }}>
@@ -499,7 +515,6 @@ export default function CovalentBonding() {
             </motion.div>
           </AnimatePresence>
 
-          {/* 통계 */}
           <AnimatePresence mode="wait">
             <motion.div key={mol.id+"s"} initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }}
               style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
@@ -519,7 +534,6 @@ export default function CovalentBonding() {
             </motion.div>
           </AnimatePresence>
 
-          {/* 설명 */}
           <AnimatePresence mode="wait">
             <motion.div key={mol.id+"d"} initial={{ opacity:0 }} animate={{ opacity:1 }}
               style={{ ...card, padding:"20px 24px" }}>
@@ -534,7 +548,6 @@ export default function CovalentBonding() {
             </motion.div>
           </AnimatePresence>
 
-          {/* 결합 유형 정리 */}
           <div style={{ ...card, padding:"20px 24px" }}>
             <p style={{ fontSize:11, fontWeight:700, color:"#86868b",
               letterSpacing:"0.05em", textTransform:"uppercase", marginBottom:14 }}>결합 유형 정리</p>
