@@ -388,8 +388,10 @@ export default function CovalentBonding() {
         </p>
       </div>
       
-      <div style={{ display:"grid", gridTemplateColumns:"220px 1fr", gap:20 }}
-        className="block lg:grid">
+      {/* gridTemplateColumns를 인라인에서 제거 — 인라인 style은 명시도가 항상 높아
+          className의 반응형 규칙을 덮어씌우므로 컬럼 정의는 Tailwind에서만 선언합니다. */}
+      <div style={{ display:"grid", gap:20 }}
+        className="grid-cols-1 lg:grid-cols-[220px_1fr]">
 
         {/* 분자 선택 */}
         <div style={{ ...card, overflow:"hidden" }}>
