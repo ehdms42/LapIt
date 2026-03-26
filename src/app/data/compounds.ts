@@ -77,7 +77,7 @@ export const COMPOUND_DB: Record<string, Compound> = {
   'mg-2+s-2':   { formula: 'MgS',    name: '황화마그네슘',  color: '#ca8a04', props: ['물에서 가수분해', '형광체 원료', '반도체 소재'] },
   'mg-2+so4-2': { formula: 'MgSO₄',  name: '황산마그네슘 (엡솜염)', color: '#0891b2', props: ['목욕 첨가제', '완하제 (설사약)', '비료 원료'] },
   'mg-2+co3-2': { formula: 'MgCO₃',  name: '탄산마그네슘',  color: '#a78bfa', props: ['제산제', '내화 단열재', '체조·역도 미끄럼 방지 가루'] },
-  'mg-3+po4-3': { formula: 'Mg₃(PO₄)₂', name: '인산마그네슘', color: '#22c55e', props: ['항산화 안정제', '식품 첨가물', '뼈 건강 보충제'] },
+  'mg-6+po4-6': { formula: 'Mg₃(PO₄)₂', name: '인산마그네슘', color: '#22c55e', props: ['항산화 안정제', '식품 첨가물', '뼈 건강 보충제'] },
 
   // ══════════════════════════════════════════════
   // Ca²⁺ (칼슘) 화합물
@@ -87,7 +87,7 @@ export const COMPOUND_DB: Record<string, Compound> = {
   'ca-2+s-2':   { formula: 'CaS',    name: '황화칼슘',      color: '#ca8a04', props: ['야광 안료 원료', '제모제 성분', '환원제'] },
   'ca-2+so4-2': { formula: 'CaSO₄',  name: '황산칼슘 (석고)', color: '#94a3b8', props: ['건축 자재 (석고보드)', '두부 응고제', '골절 고정 깁스'] },
   'ca-2+co3-2': { formula: 'CaCO₃',  name: '탄산칼슘',      color: '#94a3b8', props: ['석회석·대리석·분필의 주성분', '제산제', '산과 반응 → CO₂ 발생'] },
-  'ca-3+po4-3': { formula: 'Ca₃(PO₄)₂', name: '인산칼슘',  color: '#22c55e', props: ['뼈·치아의 주요 무기 성분', '비료 원료', '식품 완충제'] },
+  'ca-6+po4-6': { formula: 'Ca₃(PO₄)₂', name: '인산칼슘',  color: '#22c55e', props: ['뼈·치아의 주요 무기 성분', '비료 원료', '식품 완충제'] },
 
   // ══════════════════════════════════════════════
   // Ba²⁺ (바륨) 화합물
@@ -131,35 +131,13 @@ export const COMPOUND_DB: Record<string, Compound> = {
   'al-3+cl-3':  { formula: 'AlCl₃',  name: '염화알루미늄',  color: '#7c3aed', props: ['루이스 산 촉매', '물에 강산성', '땀 냄새 제거제 성분'] },
   'al-3+o-3':   { formula: 'Al₂O₃',  name: '알루미나',      color: '#92400e', props: ['루비·사파이어의 주성분', '용융점 2072°C', '내마모성 코팅 재료'] },
   'al-3+f-3':   { formula: 'AlF₃',   name: '불화알루미늄',  color: '#8b5cf6', props: ['알루미늄 제련 원료', '고온 내성', '촉매'] },
-  'al-2+so4-3': { formula: 'Al₂(SO₄)₃', name: '황산알루미늄', color: '#0891b2', props: ['수처리 응집제', '백반 원료', '제지 사이징제'] },
-  'al-1+po4-1': { formula: 'AlPO₄',  name: '인산알루미늄',  color: '#22c55e', props: ['내화 세라믹 결합제', '치과 시멘트', '촉매 담체'] },
+  'al-6+so4-6': { formula: 'Al₂(SO₄)₃', name: '황산알루미늄', color: '#0891b2', props: ['수처리 응집제', '백반 원료', '제지 사이징제'] },
+  'al-3+po4-3': { formula: 'AlPO₄',  name: '인산알루미늄',  color: '#22c55e', props: ['내화 세라믹 결합제', '치과 시멘트', '촉매 담체'] },
 
   // ══════════════════════════════════════════════
   // Fe³⁺ (철 III) 화합물
   // ══════════════════════════════════════════════
   'fe3-3+cl-3': { formula: 'FeCl₃',  name: '염화철(III)',   color: '#dc2626', props: ['산화제', '구리 에칭 시약 (PCB)', '수처리 응집제'] },
   'fe3-3+o-3':  { formula: 'Fe₂O₃',  name: '산화철(III) (적철석)', color: '#b91c1c', props: ['녹 (철의 산화)', '빨간 안료', '철 광석 주성분'] },
-  'fe3-1+so4-2':{ formula: 'Fe₂(SO₄)₃', name: '황산철(III)', color: '#ef4444', props: ['산화제', '토양 산성화제', '수처리 응집제'] },
-
-  // ===== 수산화물 (중요) =====
-  'ca-2+oh-2': { formula: 'Ca(OH)₂', name: '수산화칼슘', color: '#84cc16', props: ['강염기', '석회수', 'CO₂ 검출'] },
-  'mg-2+oh-2': { formula: 'Mg(OH)₂', name: '수산화마그네슘', color: '#22c55e', props: ['약염기', '제산제'] },
-  'fe2-2+oh-2': { formula: 'Fe(OH)₂', name: '수산화철(II)', color: '#65a30d', props: ['연녹색 침전', '산화되면 갈색'] },
-  'fe3-3+oh-3': { formula: 'Fe(OH)₃', name: '수산화철(III)', color: '#b45309', props: ['갈색 침전', '응집제'] },
-  'al-3+oh-3': { formula: 'Al(OH)₃', name: '수산화알루미늄', color: '#7c3aed', props: ['양쪽성', '제산제'] },
-  'zn-2+oh-2': { formula: 'Zn(OH)₂', name: '수산화아연', color: '#0ea5e9', props: ['양쪽성', '산·염기 모두 반응'] },
-  'cu-2+oh-2': { formula: 'Cu(OH)₂', name: '수산화구리', color: '#0891b2', props: ['파란 침전', '열분해 → CuO'] },
-
-  // ===== 암모늄 =====
-  'nh4-1+cl-1': { formula: 'NH₄Cl', name: '염화암모늄', color: '#9333ea', props: ['약산성', '기침약'] },
-  'nh4-1+no3-1': { formula: 'NH₄NO₃', name: '질산암모늄', color: '#f87171', props: ['비료', '폭발성'] },
-  'nh4-2+so4-2': { formula: '(NH₄)₂SO₄', name: '황산암모늄', color: '#0891b2', props: ['비료'] },
-  'nh4-2+co3-2': { formula: '(NH₄)₂CO₃', name: '탄산암모늄', color: '#a78bfa', props: ['가열 시 NH₃ 발생', '베이킹 재료'] },
-
-  // ===== 추가 산화물 =====
-  'ag-2+o-2': { formula: 'Ag₂O', name: '산화은', color: '#9ca3af', props: ['갈색 침전', '빛에 분해'] },
-
-  // ===== 추가 반응형 =====
-  'cu-2+cl-1': { formula: 'CuCl', name: '염화구리(I)', color: '#a16207', props: ['불안정', '공기 중 산화'] },
+  'fe3-6+so4-6':{ formula: 'Fe₂(SO₄)₃', name: '황산철(III)', color: '#ef4444', props: ['산화제', '토양 산성화제', '수처리 응집제'] },
 }
-

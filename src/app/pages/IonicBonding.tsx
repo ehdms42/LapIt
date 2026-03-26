@@ -245,9 +245,9 @@ export default function IonicBonding() {
       offsetY: e.clientY - rect.top - item.y,
       fromPalette: false,
     }
-    // 기존 snap 연결 해제
+    // 기존 snap 연결 해제 (bondedAnions도 같이 초기화)
     setItems(prev => prev.map(it => {
-      if (it.uid === uid) return { ...it, stackAbove: null, stackBelow: null, bondedTo: null }
+      if (it.uid === uid) return { ...it, stackAbove: null, stackBelow: null, bondedTo: null, bondedAnions: [] }
       return {
         ...it,
         stackAbove: it.stackAbove === uid ? null : it.stackAbove,
