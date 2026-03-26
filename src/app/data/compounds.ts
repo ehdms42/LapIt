@@ -140,4 +140,26 @@ export const COMPOUND_DB: Record<string, Compound> = {
   'fe3-3+cl-3': { formula: 'FeCl₃',  name: '염화철(III)',   color: '#dc2626', props: ['산화제', '구리 에칭 시약 (PCB)', '수처리 응집제'] },
   'fe3-3+o-3':  { formula: 'Fe₂O₃',  name: '산화철(III) (적철석)', color: '#b91c1c', props: ['녹 (철의 산화)', '빨간 안료', '철 광석 주성분'] },
   'fe3-1+so4-2':{ formula: 'Fe₂(SO₄)₃', name: '황산철(III)', color: '#ef4444', props: ['산화제', '토양 산성화제', '수처리 응집제'] },
+
+  // ===== 수산화물 (중요) =====
+  'ca-2+oh-2': { formula: 'Ca(OH)₂', name: '수산화칼슘', color: '#84cc16', props: ['강염기', '석회수', 'CO₂ 검출'] },
+  'mg-2+oh-2': { formula: 'Mg(OH)₂', name: '수산화마그네슘', color: '#22c55e', props: ['약염기', '제산제'] },
+  'fe2-2+oh-2': { formula: 'Fe(OH)₂', name: '수산화철(II)', color: '#65a30d', props: ['연녹색 침전', '산화되면 갈색'] },
+  'fe3-3+oh-3': { formula: 'Fe(OH)₃', name: '수산화철(III)', color: '#b45309', props: ['갈색 침전', '응집제'] },
+  'al-3+oh-3': { formula: 'Al(OH)₃', name: '수산화알루미늄', color: '#7c3aed', props: ['양쪽성', '제산제'] },
+  'zn-2+oh-2': { formula: 'Zn(OH)₂', name: '수산화아연', color: '#0ea5e9', props: ['양쪽성', '산·염기 모두 반응'] },
+  'cu-2+oh-2': { formula: 'Cu(OH)₂', name: '수산화구리', color: '#0891b2', props: ['파란 침전', '열분해 → CuO'] },
+
+  // ===== 암모늄 =====
+  'nh4-1+cl-1': { formula: 'NH₄Cl', name: '염화암모늄', color: '#9333ea', props: ['약산성', '기침약'] },
+  'nh4-1+no3-1': { formula: 'NH₄NO₃', name: '질산암모늄', color: '#f87171', props: ['비료', '폭발성'] },
+  'nh4-2+so4-2': { formula: '(NH₄)₂SO₄', name: '황산암모늄', color: '#0891b2', props: ['비료'] },
+  'nh4-2+co3-2': { formula: '(NH₄)₂CO₃', name: '탄산암모늄', color: '#a78bfa', props: ['가열 시 NH₃ 발생', '베이킹 재료'] },
+
+  // ===== 추가 산화물 =====
+  'ag-2+o-2': { formula: 'Ag₂O', name: '산화은', color: '#9ca3af', props: ['갈색 침전', '빛에 분해'] },
+
+  // ===== 추가 반응형 =====
+  'cu-2+cl-1': { formula: 'CuCl', name: '염화구리(I)', color: '#a16207', props: ['불안정', '공기 중 산화'] },
 }
+
