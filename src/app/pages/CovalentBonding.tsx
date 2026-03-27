@@ -368,7 +368,7 @@ function LewisView({ mol }: { mol: MolData }) {
 export default function CovalentBonding() {
   const [selId, setSelId] = useState("h2");
   const [viewMode, setViewMode] = useState<"bohr"|"lewis">("bohr");
-  const mol = MOLS.find(m => m.id === selId)!;
+  const mol = MOLS.find(m => m.id === selId) ?? MOLS[0];
 
   const card: React.CSSProperties = {
     background: "#fff", borderRadius: 20,
