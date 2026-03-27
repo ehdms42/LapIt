@@ -203,6 +203,11 @@ function isSinglePair(cats: CanvasIon[], anis: CanvasIon[]): boolean {
   return new Set(cats.map(c => c.ion.id)).size === 1 && new Set(anis.map(a => a.ion.id)).size === 1
 }
 
+// ── 판별 유니온 타입 (fix #2: any 제거) ──────────────────────
+type ChargeStatusItem =
+  | { sym: string }
+  | { label: string; val: string; color: string }
+
 interface CanvasIon {
   uid: string; ion: Ion; x: number; y: number
   stackAbove: string | null; stackBelow: string | null
@@ -237,10 +242,8 @@ export default function IonicBonding() {
   }>({ uid: null, ion: null, ghostEl: null, offsetX: 0, offsetY: 0, fromPalette: false })
   const mkUid = () => `u${uidRef.current++}`
 
-  // ── cleanup을 ref로 감싸서 순환 의존성 제거 ──────────────────
   const cleanupRef = useRef<() => void>(() => {})
 
-  // ── onMove: canvasRef만 의존 ──────────────────────────────────
   const onMove = useCallback((e: PointerEvent) => {
     const d = drag.current
     if (!d.ion) return
@@ -258,7 +261,6 @@ export default function IonicBonding() {
     }
   }, [])
 
-  // ── onUp: setItems만 의존 (cleanup은 ref 통해 호출) ───────────
   const onUp = useCallback((e: PointerEvent) => {
     const d = drag.current
     if (!d.ion) return
@@ -310,20 +312,27 @@ export default function IonicBonding() {
       if (!bestUid) return next
       const partner = next.find(it => it.uid === bestUid)!
       const partH = pieceH(Math.abs(partner.ion.charge))
+
       if (mode === 'horiCatAnion') {
         const { topY } = stackBounds(getStack(dUid!, next))
         const slot = partner.bondedAnions.length
+        // ── fix #1: x는 양이온 고정, y만 slot으로 이동 ──────────
+        const aniX = dropped.x + BW - ND          // x: 양이온 오른쪽 면 고정
+        const aniY = topY + slot * UNIT_H          // y: slot 번호만큼 아래
         next = next.map(it => {
           if (it.uid === dUid) return { ...it, bondedAnions: [...it.bondedAnions, bestUid!] }
-          if (it.uid === bestUid) return { ...it, x: dropped.x + BW - ND + slot * BW, y: topY + slot * UNIT_H, bondedTo: dUid }
+          if (it.uid === bestUid) return { ...it, x: aniX, y: aniY, bondedTo: dUid }
           return it
         })
       } else if (mode === 'horiAniCat') {
         const { topY } = stackBounds(getStack(bestUid, next))
         const slot = partner.bondedAnions.length
+        // ── fix #1: x는 양이온 고정, y만 slot으로 이동 ──────────
+        const aniX = partner.x + BW - ND           // x: 양이온 오른쪽 면 고정
+        const aniY = topY + slot * UNIT_H           // y: slot 번호만큼 아래
         next = next.map(it => {
           if (it.uid === bestUid) return { ...it, bondedAnions: [...it.bondedAnions, dUid!] }
-          if (it.uid === dUid) return { ...it, x: partner.x + BW - ND + slot * BW, y: topY + slot * UNIT_H, bondedTo: bestUid }
+          if (it.uid === dUid) return { ...it, x: aniX, y: aniY, bondedTo: bestUid }
           return it
         })
       } else if (mode === 'stackBelow') {
@@ -338,7 +347,8 @@ export default function IonicBonding() {
           if (it.bondedTo && allCatUids.includes(it.bondedTo)) {
             const catItem = baseNext.find(c => c.uid === it.bondedTo)!
             const idx = catItem.bondedAnions.indexOf(it.uid)
-            return { ...it, x: partner.x + BW - ND + idx * BW, y: newTopY + idx * UNIT_H }
+            // ── fix #1: 스택 재배치도 x 고정, y만 갱신 ──────────
+            return { ...it, x: partner.x + BW - ND, y: newTopY + idx * UNIT_H }
           }
           return it
         })
@@ -354,7 +364,8 @@ export default function IonicBonding() {
           if (it.bondedTo && allCatUids.includes(it.bondedTo)) {
             const catItem = baseNext.find(c => c.uid === it.bondedTo)!
             const idx = catItem.bondedAnions.indexOf(it.uid)
-            return { ...it, x: partner.x + BW - ND + idx * BW, y: newTopY + idx * UNIT_H }
+            // ── fix #1: 스택 재배치도 x 고정, y만 갱신 ──────────
+            return { ...it, x: partner.x + BW - ND, y: newTopY + idx * UNIT_H }
           }
           return it
         })
@@ -364,17 +375,14 @@ export default function IonicBonding() {
     cleanupRef.current()
   }, [])
 
-  // ── cleanup 정의 후 ref에 할당 ────────────────────────────────
   const cleanup = useCallback(() => {
     window.removeEventListener('pointermove', onMove)
     window.removeEventListener('pointerup', onUp)
     drag.current = { uid: null, ion: null, ghostEl: null, offsetX: 0, offsetY: 0, fromPalette: false }
   }, [onMove, onUp])
 
-  // ref 최신화 (렌더마다 갱신)
   cleanupRef.current = cleanup
 
-  // ── 팔레트 드래그 시작 ────────────────────────────────────────
   const onPaletteDragStart = useCallback((ion: Ion, e: React.PointerEvent) => {
     e.preventDefault()
     const ghost = document.createElement('div')
@@ -386,7 +394,6 @@ export default function IonicBonding() {
     window.addEventListener('pointerup', onUp)
   }, [onMove, onUp])
 
-  // ── 캔버스 드래그 시작 ────────────────────────────────────────
   const onCanvasDragStart = useCallback((e: React.PointerEvent, uid: string) => {
     e.preventDefault(); e.stopPropagation()
     const item = items.find(i => i.uid === uid)
@@ -453,6 +460,15 @@ export default function IonicBonding() {
   const aniList = IONS.filter(i => i.type === 'anion')
   const C: React.CSSProperties = { background: '#fff', borderRadius: 20, border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }
 
+  // ── fix #2: 판별 유니온 타입으로 any 제거 ────────────────────
+  const chargeStatusItems: ChargeStatusItem[] = [
+    { label: '양이온 합', val: `+${totPos}`, color: '#0066cc' },
+    { sym: '+' },
+    { label: '음이온 합', val: `−${totNeg}`, color: '#dc2626' },
+    { sym: '=' },
+    { label: '전하 합', val: balanced ? '0' : String(totPos - totNeg), color: balanced ? '#16a34a' : '#1d1d1f' },
+  ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div>
@@ -499,20 +515,16 @@ export default function IonicBonding() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ ...C, padding: '16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-              {[
-                { label: '양이온 합', val: `+${totPos}`, color: '#0066cc' },
-                { sym: '+' },
-                { label: '음이온 합', val: `−${totNeg}`, color: '#dc2626' },
-                { sym: '=' },
-                { label: '전하 합', val: balanced ? '0' : String(totPos - totNeg), color: balanced ? '#16a34a' : '#1d1d1f' },
-              ].map((item: any, i) => item.sym ? (
-                <span key={i} style={{ color: '#d1d5db', fontSize: 20, fontWeight: 300 }}>{item.sym}</span>
-              ) : (
-                <div key={i}>
-                  <p style={{ fontSize: 10, color: '#86868b', marginBottom: 3, fontWeight: 600 }}>{item.label}</p>
-                  <p style={{ fontSize: 24, fontWeight: 800, color: item.color, lineHeight: 1, letterSpacing: '-0.03em' }}>{item.val}</p>
-                </div>
-              ))}
+              {chargeStatusItems.map((item, i) =>
+                'sym' in item ? (
+                  <span key={i} style={{ color: '#d1d5db', fontSize: 20, fontWeight: 300 }}>{item.sym}</span>
+                ) : (
+                  <div key={i}>
+                    <p style={{ fontSize: 10, color: '#86868b', marginBottom: 3, fontWeight: 600 }}>{item.label}</p>
+                    <p style={{ fontSize: 24, fontWeight: 800, color: item.color, lineHeight: 1, letterSpacing: '-0.03em' }}>{item.val}</p>
+                  </div>
+                )
+              )}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={check} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 980, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, background: '#0066cc', color: '#fff', letterSpacing: '-0.01em' }}>
